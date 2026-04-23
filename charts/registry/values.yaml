@@ -1,0 +1,70 @@
+# Docker registry image
+image:
+  repository: registry
+  tag: "2"
+  pullPolicy: IfNotPresent
+
+# Number of replicas. Keep at 1 when using ReadWriteOnce persistent storage.
+replicaCount: 1
+
+# Kubernetes Service configuration
+service:
+  type: ClusterIP
+  port: 5000
+  # Extra annotations on the Service — useful for future Pangolin or load balancer integration
+  annotations: {}
+
+# Persistent storage for registry data (images and layers)
+persistence:
+  enabled: true
+  # Rancher LocalPath Provisioner storageClass (built-in on RKE2)
+  storageClassName: local-path
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  # Reference an existing PVC instead of creating one. Useful for sharing storage
+  # between two registry installs (e.g. a push registry + a pull-through proxy).
+  # When set, storageClassName/accessMode/size above are ignored.
+  existingClaim: ""
+
+# htpasswd-based authentication
+auth:
+  enabled: false
+
+  # Plain username/password pairs — htpasswd hashes are generated automatically by Helm.
+  # No external tooling required.
+  # Example:
+  #   users:
+  #     - username: myuser
+  #       password: mypassword
+  #     - username: anotheruser
+  #       password: anotherpassword
+  users: []
+
+  # Alternative: reference a pre-existing Kubernetes Secret that contains an "htpasswd" key.
+  # If set, this takes precedence and the "users" list above is ignored.
+  existingSecret: ""
+
+# Pull-through cache / proxy mode
+# When enabled, the registry proxies pulls from a remote registry.
+# NOTE: Pushing images is not supported in proxy mode (Docker limitation).
+proxy:
+  enabled: false
+  remoteUrl: https://registry-1.docker.io
+
+# Additional environment variables for the registry container
+extraEnv: []
+# - name: REGISTRY_LOG_LEVEL
+#   value: debug
+
+# Resource requests and limits
+resources: {}
+# requests:
+#   cpu: 100m
+#   memory: 128Mi
+# limits:
+#   cpu: 500m
+#   memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []

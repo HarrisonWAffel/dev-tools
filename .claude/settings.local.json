@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(helm template *)",
+      "Bash(helm lint *)",
+      "Bash(helm package *)",
+      "Bash(helm repo *)"
+    ]
+  }
+}

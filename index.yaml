@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  registry:
+  - apiVersion: v2
+    appVersion: "2"
+    created: "2026-04-23T15:58:47.177962-04:00"
+    description: A minimal private Docker registry (registry:2)
+    digest: 608fa38d1590f6a0a5d67e4eae12d54e5dbe8bc5f3c9af1225fed247fc8cce65
+    name: registry
+    type: application
+    urls:
+    - https://harrisonwaffel.github.io/dev-tools/packages/registry-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-04-23T15:58:47.177653-04:00"
