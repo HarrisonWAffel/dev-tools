@@ -51,6 +51,15 @@ proxy:
   enabled: false
   remoteUrl: https://registry-1.docker.io
 
+  # Credentials for authenticating pulls from the upstream registry.
+  # For Docker Hub, use your username and a Personal Access Token (PAT) as the password.
+  # If existingSecret is set it takes precedence and username/password are ignored.
+  # The referenced Secret must contain keys "username" and "password".
+  auth:
+    username: ""
+    password: ""
+    existingSecret: ""
+
 # Additional environment variables for the registry container
 extraEnv: []
 # - name: REGISTRY_LOG_LEVEL

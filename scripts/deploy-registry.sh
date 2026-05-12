@@ -17,6 +17,9 @@
 #       --auth-secret SECRET  Use a pre-existing htpasswd Secret instead of --auth-user
 #       --proxy               Enable pull-through proxy mode
 #       --proxy-url URL       Upstream registry URL       (default: https://registry-1.docker.io)
+#       --proxy-user USER     Docker Hub username for authenticated proxy pulls
+#       --proxy-password PASS Docker Hub password or Personal Access Token
+#       --proxy-secret SECRET Pre-existing Secret with "username"/"password" keys (alternative to --proxy-user/--proxy-password)
 #       --existing-claim PVC  Share an existing PVC instead of creating one
 #       --dry-run             Pass --dry-run to Helm (renders templates, no cluster changes)
 #   -h, --help                Show this help and exit
@@ -35,6 +38,9 @@ AUTH_PASSWORDS=()
 AUTH_SECRET=""
 PROXY=false
 PROXY_URL="https://registry-1.docker.io"
+PROXY_USER=""
+PROXY_PASSWORD=""
+PROXY_SECRET=""
 EXISTING_CLAIM=""
 DRY_RUN=false
 
@@ -58,6 +64,9 @@ while [[ $# -gt 0 ]]; do
     --auth-secret)        AUTH_SECRET="$2";       shift 2 ;;
     --proxy)              PROXY=true;             shift   ;;
     --proxy-url)          PROXY_URL="$2";         shift 2 ;;
+    --proxy-user)         PROXY_USER="$2";        shift 2 ;;
+    --proxy-password)     PROXY_PASSWORD="$2";    shift 2 ;;
+    --proxy-secret)       PROXY_SECRET="$2";      shift 2 ;;
     --existing-claim)     EXISTING_CLAIM="$2";    shift 2 ;;
     --dry-run)            DRY_RUN=true;           shift   ;;
     -h|--help)            usage ;;
@@ -71,6 +80,18 @@ done
 
 [[ -n "$AUTH_SECRET" && ${#AUTH_USERS[@]} -gt 0 ]] && \
   die "--auth-secret and --auth-user are mutually exclusive."
+
+[[ -n "$PROXY_SECRET" && ( -n "$PROXY_USER" || -n "$PROXY_PASSWORD" ) ]] && \
+  die "--proxy-secret and --proxy-user/--proxy-password are mutually exclusive."
+
+[[ -n "$PROXY_USER" && -z "$PROXY_PASSWORD" ]] && \
+  die "--proxy-user requires --proxy-password."
+
+[[ -n "$PROXY_PASSWORD" && -z "$PROXY_USER" ]] && \
+  die "--proxy-password requires --proxy-user."
+
+[[ ( -n "$PROXY_USER" || -n "$PROXY_SECRET" ) && "$PROXY" != true ]] && \
+  PROXY=true
 
 [[ -n "$VALUES_FILE" && ! -f "$VALUES_FILE" ]] && \
   die "Values file not found: $VALUES_FILE"
@@ -110,6 +131,15 @@ if [[ "$PROXY" == true ]]; then
     --set proxy.enabled=true
     --set "proxy.remoteUrl=$PROXY_URL"
   )
+  if [[ -n "$PROXY_USER" ]]; then
+    HELM_ARGS+=(
+      --set-string "proxy.auth.username=$PROXY_USER"
+      --set-string "proxy.auth.password=$PROXY_PASSWORD"
+    )
+  fi
+  if [[ -n "$PROXY_SECRET" ]]; then
+    HELM_ARGS+=(--set "proxy.auth.existingSecret=$PROXY_SECRET")
+  fi
 fi
 
 # Shared PVC
@@ -135,6 +165,8 @@ echo "  Namespace: $NAMESPACE"
 [[ ${#AUTH_USERS[@]} -gt 0 ]] && echo "  Auth:      enabled (${#AUTH_USERS[@]} user(s))"
 [[ -n "$AUTH_SECRET" ]]       && echo "  Auth:      existing secret '$AUTH_SECRET'"
 [[ "$PROXY" == true ]]        && echo "  Proxy:     $PROXY_URL"
+[[ -n "$PROXY_USER" ]]        && echo "  Proxy auth: user '$PROXY_USER' (PAT/password)"
+[[ -n "$PROXY_SECRET" ]]      && echo "  Proxy auth: existing secret '$PROXY_SECRET'"
 [[ -n "$EXISTING_CLAIM" ]]    && echo "  PVC:       existing claim '$EXISTING_CLAIM'"
 [[ "$DRY_RUN" == true ]]      && echo "  Mode:      dry-run"
 echo ""

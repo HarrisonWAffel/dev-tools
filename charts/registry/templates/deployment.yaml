@@ -14,8 +14,8 @@ spec:
       labels:
         {{- include "registry.selectorLabels" . | nindent 8 }}
       annotations:
-        # Restart the pod automatically when the registry config changes.
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       containers:
         - name: registry
@@ -35,9 +35,25 @@ spec:
               mountPath: /auth
               readOnly: true
             {{- end }}
-          {{- with .Values.extraEnv }}
+          {{- $proxyAuth := and .Values.proxy.enabled (or .Values.proxy.auth.username .Values.proxy.auth.existingSecret) }}
+          {{- if or .Values.extraEnv $proxyAuth }}
           env:
+            {{- if $proxyAuth }}
+            {{- $secretName := .Values.proxy.auth.existingSecret | default (printf "%s-proxy-auth" (include "registry.fullname" .)) }}
+            - name: REGISTRY_PROXY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: username
+            - name: REGISTRY_PROXY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: password
+            {{- end }}
+            {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
           {{- with .Values.resources }}
           resources:
