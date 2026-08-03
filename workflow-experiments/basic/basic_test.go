@@ -19,3 +19,9 @@ func Test_BasicTest3(t *testing.T) {
 		t.Errorf("Expected false, got true")
 	}
 }
+
+func Test_BasicTest4(t *testing.T) {
+	if somethingNew() != true {
+		t.Errorf("Expected true, got false")
+	}
+}
