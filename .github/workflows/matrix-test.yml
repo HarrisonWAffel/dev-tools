@@ -16,13 +16,17 @@ jobs:
     steps:
       - name: idk
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
       - name: build
         id: "build"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          set -eo pipefail
-          # Q: Does this only compare against the latest commit, or all changes in the branch? 
+          set -eo pipefail 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              CHANGED="$(git diff --name-only "$BASE_SHA...HEAD")"
+              CHANGED="$(git diff --name-only "$BASE_SHA" HEAD)"
               export CHANGED
           else
               export ALL=1

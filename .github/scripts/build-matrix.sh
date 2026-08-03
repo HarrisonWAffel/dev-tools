@@ -25,12 +25,14 @@ matches() {
   if [ $? -eq 0 ]; then
     printf "%s matches provisioning test scope '%s'\n" $(printf '%s\n' "$CHANGED" | grep -E "$pattern") $scope >&2
   else
+    printf "%s does not match provisioning test scope '%s'\n" $(printf '%s\n' "$CHANGED" | grep -E "$pattern") $scope >&2
     return 1
   fi
 }
 
 selected=""
 if [ "$ALL" = "1" ] || matches "$(yq '.full | join("|")' "$CONFIG")" "full"; then
+  printf "Triggering all scopes" >&2
   selected="$SCOPES"                                 # run every scope
 else
   for scope in $SCOPES; do
