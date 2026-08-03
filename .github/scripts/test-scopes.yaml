@@ -1,0 +1,19 @@
+scopes:
+  basic:
+    paths:
+      - '^workflow-experiments/basic/'
+    tests:
+      - { regex: '^Test_Basic.*$' }
+
+  advanced:
+    paths:
+      - '^workflow-experiments/advanced/'
+      - '^workflow-experiments/basic/'
+    tests:
+      - { regex: '^Test_Advanced.*$' }
+
+full:
+  - '^workflow-experiments/full/'
+
+skip:
+  - '^workflow-experiments/useless/'

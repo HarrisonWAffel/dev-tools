@@ -1,0 +1,71 @@
+name: matrix-test.yml
+on:
+  workflow_call:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    name: "build"
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - name: idk
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: build
+        id: "build"
+        run: |
+          set -eo pipefail
+          # Q: Does this only compare against the latest commit, or all changes in the branch? 
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              CHANGED="$(git diff --name-only "$BASE_SHA...HEAD")"
+              export CHANGED
+          else
+              export ALL=1
+          fi
+          
+          MATRIX="$(bash .github/scripts/build-matrix.sh)"
+          
+          COUNT="$(echo "$MATRIX" | jq -r '.include | length')"
+          if [ "$COUNT" -gt 0 ]; then RUN=true; else RUN=false; fi
+          echo "$MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+  run:
+    name: "run"
+    needs:
+      - setup
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TEST_REGEX: ${{ matrix.TEST_RUN_REGEX }}
+    steps:
+      - name: idk
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Set up Go environment
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: "./workflow-experiments/go.mod"
+      - name: test
+        run: |
+          cd workflow-experiments
+          go test -run $TEST_REGEX ./...
+
+  summary:
+    if: always()
+    name: "summary"
+    needs:
+      - run
+    runs-on: ubuntu-latest
+    steps:
+      - name: "summarize"
+        run: |
+          echo ${{ needs.run.result }}
