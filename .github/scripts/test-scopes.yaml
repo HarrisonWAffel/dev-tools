@@ -11,6 +11,12 @@ scopes:
     tests:
       - { regex: '^Test_Advanced.*$' }
 
+  moderate:
+    paths:
+      - '^workflow-experiments/moderate/'
+    tests:
+      - { regex: '^Test_Advanced.*$' }
+
   integration:
     paths:
       - '^workflow-experiments/basic/'

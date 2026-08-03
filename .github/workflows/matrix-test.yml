@@ -80,12 +80,13 @@ jobs:
     steps:
       - name: "summarize"
         run: |
-          echo " Test Summary"
+          echo "Improved Test Summary"
           echo "--------------------------------"
           echo "Test Combinations:"
           echo "${{ needs.setup.outputs.matrix }}"
           echo "--------------------------------"
           if [[ "${{ needs.run.result }}" != "success" && "${{ needs.run.result }}" != "skipped" ]]; then
-            echo "Some provisioning tests failed. Please check the logs for details."
+            echo "Some tests failed. Please check the logs for details."
             exit 1
           fi
+          echo "All tests passed!"

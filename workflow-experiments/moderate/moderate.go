@@ -1,0 +1,5 @@
+package moderate
+
+func x() {
+
+}
