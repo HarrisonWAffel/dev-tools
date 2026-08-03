@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-SCOPES="basic advanced"
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="${SCOPES_CONFIG:-$DIR/test-scopes.yaml}"
+SCOPES="$(yq '.scopes | keys | join(" ")' "$CONFIG")"
 
 test -f "$CONFIG"        || { echo "error: config not found: $CONFIG" >&2; exit 1; }
 command -v yq >/dev/null || { echo "error: yq (v4) is required" >&2; exit 1; }
@@ -25,7 +25,6 @@ matches() {
   if [ $? -eq 0 ]; then
     printf "%s matches provisioning test scope '%s'\n" $(printf '%s\n' "$CHANGED" | grep -E "$pattern") $scope >&2
   else
-    printf "%s does not match provisioning test scope '%s'\n" $(printf '%s\n' "$CHANGED" | grep -E "$pattern") $scope >&2
     return 1
   fi
 }
@@ -41,7 +40,8 @@ else
     fi
   done
 fi
-#echo "resolve: selected scopes: [$(echo "$selected" | xargs)]" >&2
+
+echo "resolved selected scopes: [$(echo "$selected" | xargs)]" >&2
 
 yq -o=json '.' "$CONFIG" | jq -c --arg selected "$selected" '
   {

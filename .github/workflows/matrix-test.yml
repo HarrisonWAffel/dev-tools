@@ -13,12 +13,13 @@ jobs:
       contents: read
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
+      run: ${{ steps.build.outputs.run }}
     steps:
-      - name: idk
+      - name: checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-      - name: build
+      - name: generate matrix
         id: "build"
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -26,7 +27,7 @@ jobs:
         run: |
           set -eo pipefail 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              CHANGED="$(git diff --name-only "$BASE_SHA" HEAD)"
+              CHANGED="$(git diff --name-only "$BASE_SHA...HEAD")"
               export CHANGED
           else
               export ALL=1
@@ -34,13 +35,19 @@ jobs:
           
           MATRIX="$(bash .github/scripts/build-matrix.sh)"
           
-          COUNT="$(echo "$MATRIX" | jq -r '.include | length')"
+          COUNT="$(echo "$MATRIX" | jq -r '.include | length')" 
           if [ "$COUNT" -gt 0 ]; then RUN=true; else RUN=false; fi
+          
           echo "$MATRIX"
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "run=$RUN" >> "$GITHUB_OUTPUT"
+          
+          echo "event=$EVENT_NAME, entries=$COUNT, run=$RUN"
+          echo "$MATRIX" | jq .
+
   run:
     name: "run"
+    if: ${{ needs.setup.outputs.run == 'true' }}
     needs:
       - setup
     strategy:
@@ -52,7 +59,7 @@ jobs:
     env:
       TEST_REGEX: ${{ matrix.TEST_RUN_REGEX }}
     steps:
-      - name: idk
+      - name: checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go environment
         uses: actions/setup-go@v7.0.0
@@ -65,11 +72,11 @@ jobs:
 
   summary:
     if: always()
-    name: "summary"
+    name: "Summarize CI Run"
     needs:
       - run
     runs-on: ubuntu-latest
     steps:
       - name: "summarize"
         run: |
-          echo ${{ needs.run.result }}
+          echo The CI run has ${{ needs.run.result }}

@@ -8,9 +8,16 @@ scopes:
   advanced:
     paths:
       - '^workflow-experiments/advanced/'
-      - '^workflow-experiments/basic/'
     tests:
       - { regex: '^Test_Advanced.*$' }
+
+  integration:
+    paths:
+      - '^workflow-experiments/basic/'
+      - '^workflow-experiments/advanced/'
+      - '^workflow-experiments/integration/'
+    tests:
+      - { regex: '^Test_Integration.*$' }
 
 full:
   - '^workflow-experiments/full/'
