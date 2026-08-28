@@ -40,7 +40,7 @@ jobs:
             export ALL=1
           fi
 
-          MATRIX="$(bash .github/scripts/resolve-provisioning-matrix.sh)"
+          MATRIX="$(bash .github/scripts/build-matrix.sh)"
 
           # Expect compact {"include":[...]} JSON on a single line, bail otherwise.
           if ! echo "$MATRIX" | jq -e 'has("include") and (.include | type == "array")' >/dev/null; then
@@ -106,6 +106,6 @@ jobs:
           echo "${{ needs.setup.outputs.matrix }}"
           echo "--------------------------------"
           if [[ "${{ needs.run.result }}" != "success" && "${{ needs.run.result }}" != "skipped" ]]; then
-            echo "Some provisioning tests failed. Please check the logs for details."
+            echo "Some tests failed. Please check the logs for details."
             exit 1
           fi
