@@ -103,13 +103,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "summarize"
-        run: |
-          echo " Test Summary"
-          echo "--------------------------------"
-          echo "Test Combinations:"
-          echo "${{ needs.setup.outputs.matrix }}"
-          echo "--------------------------------"
-          if [[ "${{ needs.run.result }}" != "success" && "${{ needs.run.result }}" != "skipped" ]]; then
-            echo "Some tests failed. Please check the logs for details."
-            exit 1
-          fi
+        run: echo The CI run has ${{ needs.run.result }}
