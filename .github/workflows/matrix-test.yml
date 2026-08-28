@@ -1,6 +1,10 @@
 name: matrix-test.yml
 on:
   workflow_dispatch:
+    inputs:
+      EXPLICIT_SCOPES:
+        required: false
+        type: string
   workflow_call:
     inputs:
       EXPLICIT_SCOPES:
