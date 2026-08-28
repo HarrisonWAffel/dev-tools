@@ -1,6 +1,10 @@
 name: matrix-test.yml
 on:
   workflow_call:
+    inputs:
+      EXPLICIT_SCOPES:
+        required: false
+        type: string
   pull_request:
 
 permissions: {}
@@ -24,24 +28,39 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPLICIT_SCOPES: ${{ inputs.EXPLICIT_SCOPES }}
         run: |
-          set -eo pipefail 
+          set -eo pipefail
+
+          # On a PR, diff against the base (target) SHA 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              CHANGED="$(git diff --name-only "$BASE_SHA...HEAD")"
-              export CHANGED
-          else
-              export ALL=1
+            export DIFF_BASE="$BASE_SHA"
+          elif [ -z "$EXPLICIT_SCOPES" ]; then
+            export ALL=1
           fi
-          
-          MATRIX="$(bash .github/scripts/build-matrix.sh)"
-          
-          COUNT="$(echo "$MATRIX" | jq -r '.include | length')" 
+
+          MATRIX="$(bash .github/scripts/resolve-provisioning-matrix.sh)"
+
+          # Expect compact {"include":[...]} JSON on a single line, bail otherwise.
+          if ! echo "$MATRIX" | jq -e 'has("include") and (.include | type == "array")' >/dev/null; then
+            echo "error: unexpected matrix output: $MATRIX" >&2
+            exit 1
+          fi
+
+          # If the returned matrix is empty, the test job below is skipped outright.
+          COUNT="$(echo "$MATRIX" | jq '.include | length')"
+
+          # Sanity cap against accidental fan-out
+          if [ "$COUNT" -gt 16 ]; then
+            echo "error: too many matrix entries ($COUNT)" >&2
+            exit 1
+          fi
+
           if [ "$COUNT" -gt 0 ]; then RUN=true; else RUN=false; fi
-          
-          echo "$MATRIX"
+
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "run=$RUN" >> "$GITHUB_OUTPUT"
-          
+
           echo "event=$EVENT_NAME, entries=$COUNT, run=$RUN"
           echo "$MATRIX" | jq .
 
