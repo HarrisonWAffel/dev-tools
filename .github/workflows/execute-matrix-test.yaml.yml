@@ -1,5 +1,4 @@
-name: Manually Execute Nightly Tests
-
+name: Execute Nightly Tests
 on:
   workflow_dispatch:
 
@@ -29,4 +28,4 @@ jobs:
     steps:
       - name: invoke-nightly-test-workflow
         run: |
-          gh workflow run matrix-test.yml --repo harrisonwaffel/dev-tools --ref ${{ matrix.release-branch }}
+          gh workflow run matrix-test.yml --repo harrisonwaffel/dev-tools --ref ${{ matrix.release-branch }} -f EXPLICIT_SCOPES="nightly"
