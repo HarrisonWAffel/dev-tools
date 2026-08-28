@@ -2,7 +2,7 @@ explicit:
   - name: nightly
     meta:
       branches:
-        - main
+        - master
         - unschedulable
     tests:
       - { regex: '^Test_(Basic|Advanced|Integration|).*$' }
