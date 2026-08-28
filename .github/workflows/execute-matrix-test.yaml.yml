@@ -1,8 +1,7 @@
-name: Execute Nightly Tests
+name: Manually Execute Nightly Tests
+
 on:
-  workflow_call:
-#  schedule:
-#    - cron: '35 15 * * *'
+  workflow_dispatch:
 
 jobs:
   get-target-branches:
@@ -14,7 +13,7 @@ jobs:
       - name: get-branches
         id: get-branches
         run: |
-          branches=$(yq -o=json '.explicit[] | select(.name == "nightly") | .meta.branches' .github/scripts/provisioning-test-scopes.yaml | jq -c '.')
+          branches=$(yq -o=json '.explicit[] | select(.name == "nightly") | .meta.branches' .github/scripts/test-scopes.yaml | jq -c '.')
           echo "branches=${branches}" >> "$GITHUB_OUTPUT"
 
   start-nightly-provisioning-tests:
@@ -30,4 +29,4 @@ jobs:
     steps:
       - name: invoke-nightly-test-workflow
         run: |
-          gh workflow run nightly-provisioning-tests.yml --ref ${{ matrix.release-branch }}
+          gh workflow run matrix-test.yml --repo harrisonwaffel/dev-tools --ref ${{ matrix.release-branch }}
