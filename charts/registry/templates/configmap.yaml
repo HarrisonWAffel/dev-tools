@@ -26,3 +26,32 @@ data:
     proxy:
       remoteurl: {{ .Values.proxy.remoteUrl }}
     {{- end }}
+  {{- with include "registry.pathPrefix" . }}
+  nginx.conf: |
+    events {}
+    http {
+      client_max_body_size 0;
+      proxy_request_buffering off;
+      proxy_buffering off;
+      proxy_read_timeout 900;
+      proxy_send_timeout 900;
+
+      server {
+        listen 8080;
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        location /v2/{{ . }}/ {
+          rewrite ^/v2/{{ regexQuoteMeta . }}/(.*)$ /v2/$1 break;
+          proxy_pass http://127.0.0.1:5000;
+        }
+
+        location / {
+          proxy_pass http://127.0.0.1:5000;
+        }
+      }
+    }
+  {{- end }}

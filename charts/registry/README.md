@@ -119,6 +119,18 @@ docker pull localhost:5000/myapp:latest
 
 > **Note:** The proxy registry does not enforce authentication, so it is suitable for read-only cluster-internal access. If you want to protect pull access as well, enable `auth` on the proxy install too.
 
+### Serving images under a path prefix
+
+Set `pathPrefix.prefix` to serve images at `<host>/<prefix>/<image>`, e.g. `myhost/dummyfolder/library/alpine:latest`. The registry has no native support for this, so an nginx sidecar strips the prefix before forwarding and the Service routes to the sidecar. Unprefixed paths still work.
+
+```bash
+helm install proxy . -n registry --create-namespace \
+  --set proxy.enabled=true \
+  --set pathPrefix.prefix=dummyfolder
+
+docker pull localhost:5000/dummyfolder/library/alpine:latest
+```
+
 ### Using a pre-existing htpasswd Secret
 
 If you prefer to manage credentials outside of Helm (e.g. via an external secrets operator), create a Kubernetes Secret with an `htpasswd` key and reference it:
@@ -226,6 +238,10 @@ kubectl delete pvc -n registry registry-data
 | `auth.existingSecret` | `""` | Name of a pre-existing Secret with an `htpasswd` key |
 | `proxy.enabled` | `false` | Enable pull-through cache mode |
 | `proxy.remoteUrl` | `https://registry-1.docker.io` | Upstream registry URL |
+| `pathPrefix.prefix` | `""` | Serve images under `<host>/<prefix>/`. Enables an nginx sidecar |
+| `pathPrefix.image.repository` | `nginx` | Sidecar image repository |
+| `pathPrefix.image.tag` | `"1.27-alpine"` | Sidecar image tag |
+| `pathPrefix.resources` | `{}` | Sidecar CPU/memory requests and limits |
 | `extraEnv` | `[]` | Extra environment variables for the registry container |
 | `resources` | `{}` | CPU/memory requests and limits |
 | `nodeSelector` | `{}` | Node selector constraints |

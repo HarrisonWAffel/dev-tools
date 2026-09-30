@@ -71,6 +71,29 @@ spec:
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 30
+        {{- if include "registry.pathPrefix" . }}
+        - name: prefix-proxy
+          image: "{{ .Values.pathPrefix.image.repository }}:{{ .Values.pathPrefix.image.tag }}"
+          imagePullPolicy: {{ .Values.pathPrefix.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          {{- with .Values.pathPrefix.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+        {{- end }}
       volumes:
         - name: config
           configMap:

@@ -11,7 +11,7 @@
 #   -r, --release NAME        Helm release name           (default: registry)
 #   -n, --namespace NS        Kubernetes namespace        (default: registry)
 #   -f, --values FILE         Extra values file to merge
-#       --version VERSION     Chart version to install    (default: 0.1.0)
+#       --version VERSION     Chart version to install    (default: 0.2.0)
 #       --auth-user USER      Enable auth and add a user  (repeatable)
 #       --auth-password PASS  Password for the last --auth-user (required when --auth-user is set)
 #       --auth-secret SECRET  Use a pre-existing htpasswd Secret instead of --auth-user
@@ -21,6 +21,7 @@
 #       --proxy-password PASS Docker Hub password or Personal Access Token
 #       --proxy-secret SECRET Pre-existing Secret with "username"/"password" keys (alternative to --proxy-user/--proxy-password)
 #       --existing-claim PVC  Share an existing PVC instead of creating one
+#       --path-prefix PREFIX  Serve images under <host>/PREFIX/<image>
 #       --dry-run             Pass --dry-run to Helm (renders templates, no cluster changes)
 #   -h, --help                Show this help and exit
 
@@ -32,7 +33,7 @@ GITHUB_RAW="https://raw.githubusercontent.com/harrisonwaffel/dev-tools/master/pa
 RELEASE="registry"
 NAMESPACE="registry"
 VALUES_FILE=""
-CHART_VERSION="0.1.0"
+CHART_VERSION="0.2.0"
 AUTH_USERS=()
 AUTH_PASSWORDS=()
 AUTH_SECRET=""
@@ -42,6 +43,7 @@ PROXY_USER=""
 PROXY_PASSWORD=""
 PROXY_SECRET=""
 EXISTING_CLAIM=""
+PATH_PREFIX=""
 DRY_RUN=false
 
 # ---------- helpers ----------
@@ -68,6 +70,7 @@ while [[ $# -gt 0 ]]; do
     --proxy-password)     PROXY_PASSWORD="$2";    shift 2 ;;
     --proxy-secret)       PROXY_SECRET="$2";      shift 2 ;;
     --existing-claim)     EXISTING_CLAIM="$2";    shift 2 ;;
+    --path-prefix)        PATH_PREFIX="$2";       shift 2 ;;
     --dry-run)            DRY_RUN=true;           shift   ;;
     -h|--help)            usage ;;
     *) die "Unknown option: $1" ;;
@@ -147,6 +150,11 @@ if [[ -n "$EXISTING_CLAIM" ]]; then
   HELM_ARGS+=(--set "persistence.existingClaim=$EXISTING_CLAIM")
 fi
 
+# Path prefix
+if [[ -n "$PATH_PREFIX" ]]; then
+  HELM_ARGS+=(--set-string "pathPrefix.prefix=$PATH_PREFIX")
+fi
+
 # Extra values file
 if [[ -n "$VALUES_FILE" ]]; then
   HELM_ARGS+=(-f "$VALUES_FILE")
@@ -168,6 +176,7 @@ echo "  Namespace: $NAMESPACE"
 [[ -n "$PROXY_USER" ]]        && echo "  Proxy auth: user '$PROXY_USER' (PAT/password)"
 [[ -n "$PROXY_SECRET" ]]      && echo "  Proxy auth: existing secret '$PROXY_SECRET'"
 [[ -n "$EXISTING_CLAIM" ]]    && echo "  PVC:       existing claim '$EXISTING_CLAIM'"
+[[ -n "$PATH_PREFIX" ]]       && echo "  Prefix:    /$PATH_PREFIX/"
 [[ "$DRY_RUN" == true ]]      && echo "  Mode:      dry-run"
 echo ""
 

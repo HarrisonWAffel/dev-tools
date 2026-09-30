@@ -60,6 +60,18 @@ proxy:
     password: ""
     existingSecret: ""
 
+# Serve images under a path prefix, e.g. <host>/dummyfolder/<image>.
+# The registry has no native support for this, so when a prefix is set an nginx
+# sidecar strips it before forwarding to the registry and the Service routes to
+# the sidecar. Unprefixed paths keep working.
+pathPrefix:
+  prefix: ""
+  image:
+    repository: nginx
+    tag: "1.27-alpine"
+    pullPolicy: IfNotPresent
+  resources: {}
+
 # Additional environment variables for the registry container
 extraEnv: []
 # - name: REGISTRY_LOG_LEVEL
