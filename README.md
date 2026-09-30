@@ -12,7 +12,7 @@ helm install registry charts/registry/ -n registry --create-namespace
 
 ### registry
 
-A private Docker registry with optional authentication and pull-through cache support. Backed by the Rancher LocalPath Provisioner, so it works out of the box on RKE2.
+A private Docker registry with optional authentication and pull-through cache support. Backed by the Rancher local-path provisioner by default. K3s includes it; on RKE2 and other distros, run `scripts/install-local-path.sh` first.
 
 Good for testing software that needs to interact with an authenticated registry without standing up a full-blown solution.
 

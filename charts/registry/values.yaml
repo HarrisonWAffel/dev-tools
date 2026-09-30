@@ -17,7 +17,9 @@ service:
 # Persistent storage for registry data (images and layers)
 persistence:
   enabled: true
-  # Rancher LocalPath Provisioner storageClass (built-in on RKE2)
+  # Rancher local-path provisioner StorageClass. Built into K3s. On RKE2 and other
+  # distros, install it first with scripts/install-local-path.sh, or point this at
+  # another StorageClass ("" uses the cluster default).
   storageClassName: local-path
   accessMode: ReadWriteOnce
   size: 10Gi
