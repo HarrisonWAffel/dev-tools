@@ -20,7 +20,11 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 Path prefix with surrounding slashes removed. Empty when disabled.
 */}}
 {{- define "registry.pathPrefix" -}}
-{{- .Values.pathPrefix.prefix | trimAll "/" -}}
+{{- $prefix := .Values.pathPrefix.prefix | trimAll "/" -}}
+{{- if and .Values.pathPrefix.strict (not $prefix) -}}
+{{- fail "pathPrefix.strict requires pathPrefix.prefix to be set" -}}
+{{- end -}}
+{{- $prefix -}}
 {{- end -}}
 
 {{/*

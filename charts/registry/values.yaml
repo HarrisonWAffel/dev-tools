@@ -68,6 +68,10 @@ proxy:
 # the sidecar. Unprefixed paths keep working.
 pathPrefix:
   prefix: ""
+  # Reject image requests that don't use the prefix, as a real air-gapped
+  # registry mirrored under the prefix would. Each rejected request is logged by
+  # the prefix-proxy container with a "BLOCKED" line.
+  strict: false
   image:
     repository: nginx
     tag: "1.27-alpine"

@@ -138,6 +138,28 @@ helm install proxy . -n registry --create-namespace \
 docker pull localhost:5000/dummyfolder/library/alpine:latest
 ```
 
+#### Simulating an air-gapped registry
+
+Set `pathPrefix.strict=true` to reject any image request that doesn't use the prefix. This mimics an air-gapped registry that was prepopulated under the prefix path, without having to mirror anything: prefixed pulls come through the pull-through cache, and bare-hostname pulls fail with `404 NAME_UNKNOWN`, as they would against the real thing.
+
+```bash
+helm install airgap . -n registry --create-namespace \
+  --set proxy.enabled=true \
+  --set pathPrefix.prefix=dummyfolder \
+  --set pathPrefix.strict=true
+
+docker pull localhost:5000/dummyfolder/library/alpine:latest   # works
+docker pull localhost:5000/library/alpine:latest               # fails
+```
+
+Every rejected request is logged by the `prefix-proxy` container, so you can see which clients skipped the prefix:
+
+```bash
+kubectl logs -n registry deploy/airgap -c prefix-proxy | grep BLOCKED
+```
+
+`/v2/` itself stays reachable because `docker login` and pull use it to check the API version.
+
 ### Using a pre-existing htpasswd Secret
 
 If you prefer to manage credentials outside of Helm (e.g. via an external secrets operator), create a Kubernetes Secret with an `htpasswd` key and reference it:
@@ -246,6 +268,7 @@ kubectl delete pvc -n registry registry-data
 | `proxy.enabled` | `false` | Enable pull-through cache mode |
 | `proxy.remoteUrl` | `https://registry-1.docker.io` | Upstream registry URL |
 | `pathPrefix.prefix` | `""` | Serve images under `<host>/<prefix>/`. Enables an nginx sidecar |
+| `pathPrefix.strict` | `false` | Reject requests that don't use the prefix and log them as `BLOCKED` (air-gap simulation) |
 | `pathPrefix.image.repository` | `nginx` | Sidecar image repository |
 | `pathPrefix.image.tag` | `"1.27-alpine"` | Sidecar image tag |
 | `pathPrefix.resources` | `{}` | Sidecar CPU/memory requests and limits |

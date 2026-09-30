@@ -3,7 +3,17 @@ entries:
   registry:
   - apiVersion: v2
     appVersion: "2"
-    created: "2026-09-30T10:08:56.98893-04:00"
+    created: "2026-09-30T12:12:44.324661-04:00"
+    description: A minimal private Docker registry (registry:2)
+    digest: 36b71eb06700e004c03f2f3bb265d51040aea53037e47e1d1805c674f5bc1a95
+    name: registry
+    type: application
+    urls:
+    - https://harrisonwaffel.github.io/dev-tools/packages/registry-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: "2"
+    created: "2026-09-30T12:12:44.324271-04:00"
     description: A minimal private Docker registry (registry:2)
     digest: 95a5f627a9bf28955e8fa6ed3856afc1e24b46fcf6304ee79cf1c5ea883c5b59
     name: registry
@@ -13,7 +23,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: "2"
-    created: "2026-09-30T10:08:56.988378-04:00"
+    created: "2026-09-30T12:12:44.323789-04:00"
     description: A minimal private Docker registry (registry:2)
     digest: 9bac74c195d412002152021d4cbadffca6e5241f5ea521d8b47c09ee143124a7
     name: registry
@@ -21,4 +31,4 @@ entries:
     urls:
     - https://harrisonwaffel.github.io/dev-tools/packages/registry-0.1.0.tgz
     version: 0.1.0
-generated: "2026-09-30T10:08:56.986202-04:00"
+generated: "2026-09-30T12:12:44.322563-04:00"

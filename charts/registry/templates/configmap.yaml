@@ -35,6 +35,10 @@ data:
       proxy_buffering off;
       proxy_read_timeout 900;
       proxy_send_timeout 900;
+      {{- if $.Values.pathPrefix.strict }}
+
+      log_format blocked 'BLOCKED unprefixed request: client=$remote_addr xff="$http_x_forwarded_for" "$request" ua="$http_user_agent"';
+      {{- end }}
 
       server {
         listen 8080;
@@ -47,7 +51,23 @@ data:
         location /v2/{{ . }}/ {
           rewrite ^/v2/{{ regexQuoteMeta . }}/(.*)$ /v2/$1 break;
           proxy_pass http://127.0.0.1:5000;
+          # The registry doesn't know about the prefix, so add it back to
+          # upload/redirect URLs to keep pushes on the prefixed path.
+          proxy_redirect ~^(https?://[^/]+)?/v2/(.*)$ $1/v2/{{ . }}/$2;
         }
+        {{- if $.Values.pathPrefix.strict }}
+
+        # API version check used by docker login and pull. Must stay reachable.
+        location = /v2/ {
+          proxy_pass http://127.0.0.1:5000;
+        }
+
+        location /v2/ {
+          access_log /dev/stdout blocked;
+          default_type application/json;
+          return 404 '{"errors":[{"code":"NAME_UNKNOWN","message":"repository name not known to registry (strict path prefix: use /{{ . }}/)"}]}';
+        }
+        {{- end }}
 
         location / {
           proxy_pass http://127.0.0.1:5000;
