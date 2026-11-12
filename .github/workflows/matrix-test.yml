@@ -16,12 +16,6 @@ on:
       MANUAL_MATRIX:
         required: false
         type: string # In the 'include' format expected by github.
-      HEAD_SHA:
-        required: false
-        type: string
-      HEAD_REPOSITORY:
-        required: false
-        type: string
   pull_request:
 
 permissions: {}
@@ -37,11 +31,10 @@ jobs:
       run: ${{ steps.build.outputs.run }}
     steps:
       - name: checkout
+        if: inputs.MANUAL_MATRIX == ''
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          repository: ${{ inputs.HEAD_REPOSITORY || github.repository }}
-          ref: ${{ inputs.HEAD_SHA || github.sha }}
           persist-credentials: false
       - name: generate matrix
         id: "build"
@@ -53,7 +46,11 @@ jobs:
         run: |
           set -eo pipefail
 
-          if [ "$MANUAL_MATRIX" != "" ]; then
+          if [ -n "$MANUAL_MATRIX" ]; then
+            if [ -n "$EXPLICIT_SCOPES" ]; then
+              echo "error: MANUAL_MATRIX and EXPLICIT_SCOPES cannot both be set" >&2
+              exit 1
+            fi
             echo "Using manual matrix"
             MATRIX="$(printf '%s' "$MANUAL_MATRIX" | jq -c .)"
           else
@@ -108,8 +105,6 @@ jobs:
       - name: checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          repository: ${{ inputs.HEAD_REPOSITORY || github.repository }}
-          ref: ${{ inputs.HEAD_SHA || github.sha }}
           persist-credentials: false
       - name: Set up Go environment
         uses: actions/setup-go@v7.0.0

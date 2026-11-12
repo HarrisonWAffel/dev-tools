@@ -2,33 +2,42 @@
 
 A collection of scripts and Helm charts for setting up development and test infrastructure.
 
-## PR test command
+## PR test command (`test-slash-command.yml`, `slash-matrix-test.yml`)
 
-Members of the repository's owning organization can comment on an open pull
-request to run selected Go tests:
+The owner of a personal repository or members of the repository's owning
+organization can comment on an open pull request to run selected Go tests:
 
 ```text
-/ptest rke2,testsA k3s,testsB
+/ptest rke2,Test_Basic k3s,Test_Advanced
 ```
 
-Each whitespace-separated entry adds a matrix job with `V2PROV_TEST_DIST` and
-`V2PROV_TEST_RUN_REGEX`. Distributions must be `rke2` or `k3s`; an empty
-distribution (`/ptest testsA` or `/ptest ,testsA`) defaults to `rke2`.
-Supply 1 to 16 entries.
-The first comma separates the distribution from the regex; remaining commas
-belong to the regex. Regexes cannot contain whitespace and are passed unchanged
-to `go test -run`.
+Each whitespace-separated entry creates one job with `V2PROV_TEST_DIST` and
+`V2PROV_TEST_RUN_REGEX`. Specify `rke2` or `k3s` before the comma; omitting the
+distribution (`Test_Basic` or `,Test_Basic`) defaults to `rke2`. Supply 1 to 16
+entries. Regexes are limited to 256 characters, cannot contain whitespace, and
+may only use `A-Z a-z 0-9 _ ( ) [ ] | . ^ $ * ?`. Entries for the same
+distribution must produce distinct, nonempty result names of at most 120
+characters after regex punctuation and the first `Test` are removed.
 
-The command workflow must be on the default branch. It calls that branch's
-trusted `matrix-test.yml` workflow, checks out the PR's exact head commit
-(including fork PRs), and posts a link to the run. PR workflow changes are not
-executed. Test jobs receive only a read-only repository token, with no inherited
-secrets or persisted checkout credentials. Tests themselves execute PR code, so
-members should review it before triggering a run.
+The command is handled in two stages:
 
-Configure `ADD_TO_PROJECT_PAT` with organization membership read access, including
-private memberships (`read:org` for a classic PAT). The command is unavailable in
-repositories owned by personal accounts.
+1. `test-slash-command.yml` runs on the comment in the trusted base repository
+   context. It never checks out PR code. It validates the request, replies with
+   the PR head commit and matrix (recorded in a hidden marker), and applies the
+   `ptest` label.
+2. Adding the label triggers `slash-matrix-test.yml` as a `pull_request` run,
+   so fork PRs get the usual sandbox (read-only token, no secrets, PR-scoped
+   cache) and results show up in the PR's checks. It reads the latest request
+   comment authored by `github-actions[bot]` and refuses to run if the PR head
+   has moved since the request. It calls `matrix-test.yml`, which tests the PR
+   merge commit.
+
+Tests execute PR code, so review it before running the command.
+`test-slash-command.yml` must exist on the default branch. `ADD_TO_PROJECT_PAT`
+must be able to add and remove labels on PRs in this repository (a label added
+with `GITHUB_TOKEN` would not trigger the second workflow). For organization
+repositories it must also read organization membership, including private
+memberships (`read:org` for a classic PAT).
 
 ## Helm Charts
 
