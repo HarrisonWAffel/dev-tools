@@ -1,0 +1,109 @@
+name: PR test command
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  launch-tests:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/ptest')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+      head_sha: ${{ steps.prepare.outputs.head_sha }}
+      head_repository: ${{ steps.prepare.outputs.head_repository }}
+    steps:
+      - name: Check command authorization
+        id: membership
+        uses: actions/github-script@v7
+        env:
+          MEMBERSHIP_TOKEN: ${{ secrets.ADD_TO_PROJECT_PAT }}
+        with:
+          github-token: ${{ github.event.repository.owner.type == 'Organization' && secrets.ADD_TO_PROJECT_PAT || github.token }}
+          script: |
+            if (!/^\/ptest(?:\s|$)/.test(context.payload.comment.body)) {
+              return;
+            }
+            const owner = context.payload.repository.owner;
+            const commenter = context.payload.comment.user;
+            if (owner.type === 'User') {
+              if (commenter.id !== owner.id) {
+                throw new Error('Only the repository owner may run /ptest in a personal repository.');
+              }
+              core.setOutput('authorized', 'true');
+              return;
+            }
+            if (owner.type !== 'Organization') {
+              throw new Error('/ptest requires a personal or organization-owned repository.');
+            }
+            if (!process.env.MEMBERSHIP_TOKEN) {
+              throw new Error('ADD_TO_PROJECT_PAT must have organization membership read access.');
+            }
+            await github.rest.orgs.checkMembershipForUser({
+              org: context.repo.owner,
+              username: commenter.login,
+            });
+            core.setOutput('authorized', 'true');
+
+      - name: Prepare test run
+        id: prepare
+        if: steps.membership.outputs.authorized == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const args = context.payload.comment.body.trim().split(/\s+/).slice(1);
+            if (args.length === 0 || args.length > 16) {
+              throw new Error('Expected 1 to 16 entries: /ptest <DISTRO>,<TEST_REGEX> [...].');
+            }
+            const include = args.map(arg => {
+              const comma = arg.indexOf(',');
+              const distro = comma < 0 ? 'rke2' : (arg.slice(0, comma) || 'rke2');
+              const regex = comma < 0 ? arg : arg.slice(comma + 1);
+              if (!['rke2', 'k3s'].includes(distro) || !regex) {
+                throw new Error('Expected <DISTRO>,<TEST_REGEX> or <TEST_REGEX>; use rke2, k3s, or omit the distribution for rke2.');
+              }
+              return { V2PROV_TEST_DIST: distro, V2PROV_TEST_RUN_REGEX: regex };
+            });
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.issue.number,
+            });
+            if (pr.state !== 'open' || !pr.head.repo) {
+              throw new Error('/ptest requires an open PR with an accessible head repository.');
+            }
+            const matrix = JSON.stringify({ include });
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `Starting tests for ${pr.head.sha}.\n\nMatrix:\n\`\`\`json\n${matrix}\n\`\`\`\n\n[Workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            });
+            core.setOutput('matrix', matrix);
+            core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('head_repository', pr.head.repo.full_name);
+
+      - name: Report rejected command
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `/ptest was not started. Only the owner of a personal repository or members of the repository's organization may run it. Use \`/ptest rke2,testsA k3s,testsB\` (1 to 16 entries); \`testsA\` or \`,testsA\` defaults to rke2. See the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for the error.`,
+            });
+
+  run-tests:
+    needs: launch-tests
+    if: needs.launch-tests.outputs.matrix != ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/matrix-test.yml
+    with:
+      MANUAL_MATRIX: ${{ needs.launch-tests.outputs.matrix }}
+      HEAD_SHA: ${{ needs.launch-tests.outputs.head_sha }}
+      HEAD_REPOSITORY: ${{ needs.launch-tests.outputs.head_repository }}

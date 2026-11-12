@@ -5,7 +5,8 @@
       "Bash(helm template *)",
       "Bash(helm lint *)",
       "Bash(helm package *)",
-      "Bash(helm repo *)"
+      "Bash(helm repo *)",
+      "WebFetch(domain:zotregistry.dev)"
     ]
   }
 }
