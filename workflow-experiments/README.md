@@ -1,0 +1,1 @@
+This directory contains mock Go code that can be used to test CI workflows or other things
