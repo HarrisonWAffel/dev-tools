@@ -5,9 +5,21 @@ on:
       EXPLICIT_SCOPES:
         required: false
         type: string
+      MANUAL_MATRIX:
+        required: false
+        type: string # In the 'include' format expected by github.
   workflow_call:
     inputs:
       EXPLICIT_SCOPES:
+        required: false
+        type: string
+      MANUAL_MATRIX:
+        required: false
+        type: string # In the 'include' format expected by github.
+      HEAD_SHA:
+        required: false
+        type: string
+      HEAD_REPOSITORY:
         required: false
         type: string
   pull_request:
@@ -28,23 +40,31 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
+          repository: ${{ inputs.HEAD_REPOSITORY || github.repository }}
+          ref: ${{ inputs.HEAD_SHA || github.sha }}
+          persist-credentials: false
       - name: generate matrix
         id: "build"
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPLICIT_SCOPES: ${{ inputs.EXPLICIT_SCOPES }}
+          MANUAL_MATRIX: ${{ inputs.MANUAL_MATRIX }}
         run: |
           set -eo pipefail
 
-          # On a PR, diff against the base (target) SHA 
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            export DIFF_BASE="$BASE_SHA"
-          elif [ -z "$EXPLICIT_SCOPES" ]; then
-            export ALL=1
+          if [ "$MANUAL_MATRIX" != "" ]; then
+            echo "Using manual matrix"
+            MATRIX="$(printf '%s' "$MANUAL_MATRIX" | jq -c .)"
+          else
+            # On a PR, diff against the base (target) SHA
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              export DIFF_BASE="$BASE_SHA"
+            elif [ -z "$EXPLICIT_SCOPES" ]; then
+              export ALL=1
+            fi
+            MATRIX="$(bash .github/scripts/build-matrix.sh)"
           fi
-
-          MATRIX="$(bash .github/scripts/build-matrix.sh)"
 
           # Expect compact {"include":[...]} JSON on a single line, bail otherwise.
           if ! echo "$MATRIX" | jq -e 'has("include") and (.include | type == "array")' >/dev/null; then
@@ -81,10 +101,16 @@ jobs:
     permissions:
       contents: read
     env:
-      TEST_REGEX: ${{ matrix.TEST_RUN_REGEX }}
+      TEST_REGEX: ${{ matrix.V2PROV_TEST_RUN_REGEX }}
+      V2PROV_TEST_DIST: ${{ matrix.V2PROV_TEST_DIST }}
+      V2PROV_TEST_RUN_REGEX: ${{ matrix.V2PROV_TEST_RUN_REGEX }}
     steps:
       - name: checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ inputs.HEAD_REPOSITORY || github.repository }}
+          ref: ${{ inputs.HEAD_SHA || github.sha }}
+          persist-credentials: false
       - name: Set up Go environment
         uses: actions/setup-go@v7.0.0
         with:
@@ -92,7 +118,7 @@ jobs:
       - name: test
         run: |
           cd workflow-experiments
-          go test -run $TEST_REGEX ./...
+          go test -run "$TEST_REGEX" ./...
 
   summary:
     if: always()
